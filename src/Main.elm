@@ -1,8 +1,8 @@
 module Main exposing (..)
 
-import Html exposing (Html, text, div, h1, img, p, button)
-import Html.Attributes exposing (src, style)
-import Html.Events exposing (onClick)
+import Html exposing (Html, text, div, h1, img, p, button, input)
+import Html.Attributes exposing (src, style, type_)
+import Html.Events exposing (onClick, onInput)
 
 
 ---- MODEL ----
@@ -80,6 +80,7 @@ pred mode =
 
 type Msg
     = SetMode Mode
+    | SetMax String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -90,6 +91,11 @@ update msg model =
             , Cmd.none
             )
 
+        SetMax maxStr ->
+            ( { model | maxN =
+                String.toInt maxStr |> Result.withDefault 12
+                }
+            , Cmd.none)
 
 
 ---- VIEW ----
@@ -105,6 +111,7 @@ view model =
             ([ button [ onClick (SetMode IsEven) ] [ text "evens" ]
              , button [ onClick (SetMode IsOdd) ] [ text "odds" ]
              , button [ onClick (SetMode Has2And3AsFactors) ] [ text "divisible by 2 and 3" ]
+             , input [ type_ "range", Html.Attributes.min "1", onInput SetMax] []
              , viewSummary model.mode data
              ]
                 ++ (List.map (viewBox (pred model.mode)) data)
