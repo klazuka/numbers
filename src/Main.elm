@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (Html, text, div, h1, img, p, button, input)
-import Html.Attributes exposing (src, style, type_)
+import Html.Attributes exposing (src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 
 
@@ -11,19 +11,23 @@ import Html.Events exposing (onClick, onInput)
 type alias Model =
     { mode : Mode
     , maxN : Int
+    , custom1 : Int
+    , custom2 : Int
     }
 
 
 type Mode
     = IsEven
     | IsOdd
-    | Has2And3AsFactors
+    | Custom
 
 
 init : ( Model, Cmd Msg )
 init =
     ( { mode = IsEven
       , maxN = 20
+      , custom1 = 2
+      , custom2 = 3
       }
     , Cmd.none
     )
@@ -61,8 +65,8 @@ multiplicationTable high =
         List.map makeProduct pairs
 
 
-pred : Mode -> (Int -> Bool)
-pred mode =
+pred : Model -> (Int -> Bool)
+pred { mode, custom1, custom2 } =
     case mode of
         IsEven ->
             (\n -> divisibleBy n 2)
@@ -70,8 +74,8 @@ pred mode =
         IsOdd ->
             (\n -> not (divisibleBy n 2))
 
-        Has2And3AsFactors ->
-            (\n -> divisibleBy n 2 && divisibleBy n 3)
+        Custom ->
+            (\n -> divisibleBy n custom1 && divisibleBy n custom2)
 
 
 
@@ -81,6 +85,8 @@ pred mode =
 type Msg
     = SetMode Mode
     | SetMax String
+    | SetCustom1 String
+    | SetCustom2 String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -92,10 +98,23 @@ update msg model =
             )
 
         SetMax maxStr ->
-            ( { model | maxN =
-                String.toInt maxStr |> Result.withDefault 12
-                }
-            , Cmd.none)
+            ( { model
+                | maxN =
+                    String.toInt maxStr |> Result.withDefault 12
+              }
+            , Cmd.none
+            )
+
+        SetCustom1 n ->
+            ( { model | custom1 = String.toInt n |> Result.withDefault model.custom1 }
+            , Cmd.none
+            )
+
+        SetCustom2 n ->
+            ( { model | custom2 = String.toInt n |> Result.withDefault 0 }
+            , Cmd.none
+            )
+
 
 
 ---- VIEW ----
@@ -110,11 +129,16 @@ view model =
         div []
             ([ button [ onClick (SetMode IsEven) ] [ text "evens" ]
              , button [ onClick (SetMode IsOdd) ] [ text "odds" ]
-             , button [ onClick (SetMode Has2And3AsFactors) ] [ text "divisible by 2 and 3" ]
-             , input [ type_ "range", Html.Attributes.min "1", onInput SetMax] []
-             , viewSummary model.mode data
+             , button [ onClick (SetMode Custom) ] [ text "custom" ]
+             , input [ type_ "range", Html.Attributes.min "1", onInput SetMax ] []
+             , input [ type_ "text", value (toString model.maxN) ] []
+             , input [ type_ "range", value (toString model.custom1), Html.Attributes.min "1", Html.Attributes.max "20", onInput SetCustom1 ] []
+             , input [ type_ "range", value (toString model.custom2), Html.Attributes.min "1", Html.Attributes.max "20", onInput SetCustom2 ] []
+             , input [ type_ "text", value (toString model.custom1) ] []
+             , input [ type_ "text", value (toString model.custom2) ] []
+             , viewSummary model data
              ]
-                ++ (List.map (viewBox (pred model.mode)) data)
+                ++ (List.map (viewBox (pred model)) data)
             )
 
 
@@ -140,12 +164,12 @@ viewBox pred { a, b, p } =
             [ text (toString p) ]
 
 
-viewSummary : Mode -> List Product -> Html Msg
-viewSummary mode products =
+viewSummary : Model -> List Product -> Html Msg
+viewSummary model products =
     let
         highlighted =
             List.map .p products
-                |> List.filter (pred mode)
+                |> List.filter (pred model)
 
         numHighlighted =
             List.length highlighted
